@@ -1,0 +1,58 @@
+# Wheat Crop Monitoring — operational configuration
+
+states:
+  - Uttar Pradesh
+  - Madhya Pradesh
+  - Punjab
+  - Haryana
+  - Rajasthan
+  - Bihar
+  - Gujarat
+  - Maharashtra
+
+season:
+  name: rabi
+  sowing_start: "11-01"      # 1 November
+  season_end: "04-30"        # 30 April
+  fortnight_days: 15
+
+sensors:
+  sentinel1:
+    collection: COPERNICUS/S1_GRD
+    polarizations: [VV, VH]
+    instrument_mode: IW
+    orbit: DESCENDING
+  sentinel2:
+    collection: COPERNICUS/S2_SR_HARMONIZED
+    cloud_prob_collection: COPERNICUS/S2_CLOUD_PROBABILITY
+    max_cloud_prob: 40
+  modis_ndvi:
+    collection: MODIS/061/MOD13Q1
+    band: NDVI
+    scale_factor: 0.0001
+  modis_lst:
+    collection: MODIS/061/MOD11A2
+    band: LST_Day_1km
+    scale_factor: 0.02        # Kelvin
+
+vhi:
+  climatology_start_year: 2001
+  alpha: 0.5                  # VHI = alpha*VCI + (1-alpha)*TCI
+  stress_threshold: 40        # VHI < 40 => drought/heat stressed
+  severe_threshold: 25
+
+classification:
+  n_trees: 200
+  train_split: 0.7
+  classes: {wheat: 1, non_wheat: 0}
+  monthly_composites: [11, 12, 1, 2, 3]
+
+yield_model:
+  grid_size_m: 5000
+  models:
+    random_forest: {n_estimators: 300, max_depth: 12}
+    gradient_boosting: {n_estimators: 400, learning_rate: 0.05, max_depth: 4}
+  cv_folds: 5
+
+units:
+  area_report: lakh_ha        # 1 lakh ha = 100,000 ha

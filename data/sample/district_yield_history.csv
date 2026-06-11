@@ -1,0 +1,49 @@
+state,district,year,yield_t_ha,sown_area_kha
+Punjab,Ludhiana,2020,5.21,255
+Punjab,Ludhiana,2021,5.05,258
+Punjab,Ludhiana,2022,4.62,256
+Punjab,Ludhiana,2023,5.34,259
+Punjab,Sangrur,2020,5.10,290
+Punjab,Sangrur,2021,4.98,292
+Punjab,Sangrur,2022,4.55,289
+Punjab,Sangrur,2023,5.22,293
+Haryana,Karnal,2020,4.88,172
+Haryana,Karnal,2021,4.75,174
+Haryana,Karnal,2022,4.30,171
+Haryana,Karnal,2023,4.95,175
+Haryana,Hisar,2020,4.42,330
+Haryana,Hisar,2021,4.35,332
+Haryana,Hisar,2022,3.98,328
+Haryana,Hisar,2023,4.51,334
+Uttar Pradesh,Meerut,2020,3.95,210
+Uttar Pradesh,Meerut,2021,3.88,212
+Uttar Pradesh,Meerut,2022,3.60,209
+Uttar Pradesh,Meerut,2023,4.02,214
+Uttar Pradesh,Gorakhpur,2020,3.10,245
+Uttar Pradesh,Gorakhpur,2021,3.05,247
+Uttar Pradesh,Gorakhpur,2022,2.88,243
+Uttar Pradesh,Gorakhpur,2023,3.18,248
+Madhya Pradesh,Hoshangabad,2020,3.85,310
+Madhya Pradesh,Hoshangabad,2021,3.92,315
+Madhya Pradesh,Hoshangabad,2022,3.55,308
+Madhya Pradesh,Hoshangabad,2023,3.98,318
+Madhya Pradesh,Vidisha,2020,3.20,365
+Madhya Pradesh,Vidisha,2021,3.28,368
+Madhya Pradesh,Vidisha,2022,2.95,362
+Madhya Pradesh,Vidisha,2023,3.35,370
+Rajasthan,Sri Ganganagar,2020,3.65,280
+Rajasthan,Sri Ganganagar,2021,3.58,282
+Rajasthan,Sri Ganganagar,2022,3.22,278
+Rajasthan,Sri Ganganagar,2023,3.71,284
+Bihar,Rohtas,2020,2.95,190
+Bihar,Rohtas,2021,2.90,192
+Bihar,Rohtas,2022,2.72,188
+Bihar,Rohtas,2023,3.01,193
+Gujarat,Ahmedabad,2020,3.35,135
+Gujarat,Ahmedabad,2021,3.30,137
+Gujarat,Ahmedabad,2022,3.05,133
+Gujarat,Ahmedabad,2023,3.42,138
+Maharashtra,Ahmednagar,2020,1.85,115
+Maharashtra,Ahmednagar,2021,1.82,117
+Maharashtra,Ahmednagar,2022,1.68,113
+Maharashtra,Ahmednagar,2023,1.90,118
