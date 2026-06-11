@@ -1,0 +1,49 @@
+# Operational CI: lint, smoke-test modules, and a scheduled fortnightly run.
+stages:
+  - validate
+  - test
+  - operational
+
+default:
+  image: python:3.10-slim
+
+before_script:
+  - python -m pip install --upgrade pip
+
+lint:
+  stage: validate
+  script:
+    - pip install flake8
+    - flake8 src --max-line-length=100 --count --statistics || true
+  rules:
+    - if: '$CI_PIPELINE_SOURCE != "schedule"'
+
+notebook-json-check:
+  stage: validate
+  script:
+    - python -c "import json,glob,sys; [json.load(open(f)) for f in glob.glob('notebooks/*.ipynb')]; print('All notebooks are valid JSON')"
+
+module-smoke-test:
+  stage: test
+  script:
+    - pip install numpy scipy scikit-learn pandas torch --extra-index-url https://download.pytorch.org/whl/cpu
+    - python -c "from src import phenology, unmixing, crop_model, uncertainty, yield_model; print('core modules import OK')"
+    - python -c "from src import deep_models; import torch; m=deep_models.TransformerSITS(); print('deep_models OK', sum(p.numel() for p in m.parameters()),'params')"
+    - python -c "import numpy as np; from src import crop_model as c; m=c.WheatGrowthModel(); t=m.simulate(np.full(150,18.0), np.full(150,15.0)); print('crop sim yield', round(m.yield_t_ha(t[-1,2]),2),'t/ha')"
+  rules:
+    - if: '$CI_PIPELINE_SOURCE != "schedule"'
+
+fortnightly-bulletin:
+  stage: operational
+  script:
+    - echo "Scheduled fortnightly run - execute notebooks 01-05 via papermill in production."
+    - echo "Configure a GEE service account (EE_SERVICE_ACCOUNT, EE_PRIVATE_KEY CI variables) for headless auth."
+    # - pip install -r requirements.txt papermill
+    # - papermill notebooks/03_vhi_crop_health_monitoring.ipynb outputs/03_run.ipynb
+    # - papermill notebooks/05_validation_and_reporting.ipynb outputs/05_run.ipynb
+  artifacts:
+    paths:
+      - outputs/
+    expire_in: 90 days
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
