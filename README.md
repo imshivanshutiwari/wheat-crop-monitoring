@@ -35,6 +35,22 @@ flowchart LR
 | `config/config.yaml` | States, season windows, grid size, thresholds, hyperparameters |
 | `data/sample/` | Sample district yield history & Ministry ground-truth CSVs (replace with real data) |
 
+### Advanced / research-grade extensions
+
+| Path | Purpose |
+|---|---|
+| `notebooks/06_deep_learning_classification.ipynb` | Deep SITS classifiers: **TempCNN** + **Transformer** (self-attention) + **Prithvi** foundation-model head |
+| `notebooks/07_phenology_and_unmixing.ipynb` | Per-pixel **double-logistic phenology** fitting; **FCLS spectral unmixing** for AWiFS 56 m mixed pixels |
+| `notebooks/08_crop_model_assimilation_uncertainty.ipynb` | **WOFOST-style** growth model, **Ensemble Kalman Filter** LAI assimilation, **conformal** uncertainty intervals |
+| `src/deep_models.py` | PyTorch TempCNN, TransformerSITS, PrithviHead + train/eval loops |
+| `src/phenology.py` | Double-logistic curve fitting, season metrics, NDVI integral |
+| `src/unmixing.py` | Fully-constrained least-squares sub-pixel unmixing |
+| `src/crop_model.py` | Daily wheat growth simulator + EnKF data assimilation |
+| `src/uncertainty.py` | Split-conformal intervals, MC-dropout, ensemble intervals |
+| `.gitlab-ci.yml` | Lint, notebook/module smoke tests, scheduled fortnightly run |
+
+These upgrade the baseline from a Random-Forest prototype to a research-grade system: temporal deep learning, sub-pixel accuracy, physically-based yield with satellite data assimilation, and quantified forecast uncertainty.
+
 ## Setup
 
 ```bash
