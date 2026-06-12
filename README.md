@@ -22,34 +22,66 @@ flowchart LR
     R --> V
 ```
 
-## Repository layout
+## 📁 Repository Layout & Pipeline Details
 
-| Path | Purpose |
-|---|---|
-| `notebooks/01_aoi_and_data_acquisition.ipynb` | AOI definition (8 states), Rabi windows, S1/S2/MODIS acquisition, AWiFS & IMD loaders |
-| `notebooks/02_sar_optical_fusion_sown_area.ipynb` | SAR-optical fusion, RF wheat classification, sown area (lakh ha), choropleth, phenology curves |
-| `notebooks/03_vhi_crop_health_monitoring.ipynb` | VCI/TCI/VHI computation, fortnightly bulletins, heat stress hotspots |
-| `notebooks/04_yield_forecast_ml.ipynb` | 5 km grid features, scikit-learn regression, district/state yield forecast |
-| `notebooks/05_validation_and_reporting.ipynb` | Satellite vs ground-truth evaluation matrix, correlation scatter, bulletin report |
-| `src/` | Reusable Python modules used by all notebooks |
-| `config/config.yaml` | States, season windows, grid size, thresholds, hyperparameters |
-| `data/sample/` | Sample district yield history & Ministry ground-truth CSVs (replace with real data) |
+### 📓 Baseline Pipeline Notebooks
 
-### Advanced / research-grade extensions
+#### `01_aoi_and_data_acquisition.ipynb`
+- **What it does:** Defines the Areas of Interest (AOI) spanning 8 states and sets the Rabi season time windows. It acquires and preprocesses imagery from Sentinel-1 (SAR), Sentinel-2 (Optical), and MODIS. It also contains loaders for AWiFS and IMD meteorological gridded data.
+- **Output:** Preprocessed satellite image collections, clipped to specific regions and timeframes, ready for feature extraction.
 
-| Path | Purpose |
-|---|---|
-| `notebooks/06_deep_learning_classification.ipynb` | Deep SITS classifiers: **TempCNN** + **Transformer** (self-attention) + **Prithvi** foundation-model head |
-| `notebooks/07_phenology_and_unmixing.ipynb` | Per-pixel **double-logistic phenology** fitting; **FCLS spectral unmixing** for AWiFS 56 m mixed pixels |
-| `notebooks/08_crop_model_assimilation_uncertainty.ipynb` | **WOFOST-style** growth model, **Ensemble Kalman Filter** LAI assimilation, **conformal** uncertainty intervals |
-| `src/deep_models.py` | PyTorch TempCNN, TransformerSITS, PrithviHead + train/eval loops |
-| `src/phenology.py` | Double-logistic curve fitting, season metrics, NDVI integral |
-| `src/unmixing.py` | Fully-constrained least-squares sub-pixel unmixing |
-| `src/crop_model.py` | Daily wheat growth simulator + EnKF data assimilation |
-| `src/uncertainty.py` | Split-conformal intervals, MC-dropout, ensemble intervals |
-| `.gitlab-ci.yml` | Lint, notebook/module smoke tests, scheduled fortnightly run |
+#### `02_sar_optical_fusion_sown_area.ipynb`
+- **What it does:** Fuses SAR and Optical features to mitigate cloud-cover issues. It trains and applies a Random Forest (RF) classifier to identify wheat-growing pixels and generates phenology curves.
+- **Output:** A classified sown area map (in lakh hectares) and district-wise choropleth maps depicting wheat crop distribution.
 
-These upgrade the baseline from a Random-Forest prototype to a research-grade system: temporal deep learning, sub-pixel accuracy, physically-based yield with satellite data assimilation, and quantified forecast uncertainty.
+#### `03_vhi_crop_health_monitoring.ipynb`
+- **What it does:** Computes the Vegetation Condition Index (VCI), Temperature Condition Index (TCI), and Vegetation Health Index (VHI) using MODIS NDVI and LST products. It identifies heat stress hotspots affecting crop vitality.
+- **Output:** Fortnightly crop health bulletins and spatial maps highlighting regions undergoing heat/drought stress.
+
+#### `04_yield_forecast_ml.ipynb`
+- **What it does:** Aggregates satellite indices and meteorological parameters onto a 5 km grid. Uses scikit-learn regression models to forecast crop yield based on these spatial features.
+- **Output:** Quantitative yield forecasts at both the district and state levels.
+
+#### `05_validation_and_reporting.ipynb`
+- **What it does:** Compares the model-derived sown area and yield estimates against official Ministry ground-truth statistics.
+- **Output:** Evaluation matrices, correlation scatter plots, and a final automated bulletin report summarizing the season's findings.
+
+---
+
+### 🔬 Advanced Research-Grade Extensions (Notebooks)
+
+These extensions upgrade the baseline from a standard machine-learning prototype to a sophisticated research-grade system.
+
+#### `06_deep_learning_classification.ipynb`
+- **What it does:** Implements Deep Satellite Image Time Series (SITS) classifiers as an alternative to Random Forest. Models include TempCNN, Transformers with self-attention, and a foundation-model head utilizing IBM/NASA's Prithvi.
+- **Output:** Highly accurate, temporally-aware sown area classifications that leverage deep learning patterns over the growing season.
+
+#### `07_phenology_and_unmixing.ipynb`
+- **What it does:** Fits double-logistic curves on a per-pixel basis to track crop phenology stages accurately. Applies Fully-Constrained Least-Squares (FCLS) spectral unmixing to resolve 56 m mixed pixels from AWiFS data.
+- **Output:** High-fidelity sub-pixel abundance maps and localized phenological metrics (e.g., peak vegetative stage, harvest onset).
+
+#### `08_crop_model_assimilation_uncertainty.ipynb`
+- **What it does:** Integrates a physical WOFOST-style crop growth simulator. It uses an Ensemble Kalman Filter (EnKF) to assimilate satellite-derived Leaf Area Index (LAI) into the model and calculates split-conformal uncertainty intervals.
+- **Output:** A physically grounded yield estimate accompanied by rigorous uncertainty bounds (confidence intervals) for actionable decision-making.
+
+---
+
+### 💻 Source Code Modules (`src/`)
+
+Reusable Python modules driving the notebooks and advanced algorithms.
+
+- **`deep_models.py`**: Contains PyTorch implementations of TempCNN, TransformerSITS, and PrithviHead, along with dedicated training and evaluation loops.
+- **`phenology.py`**: Functions for double-logistic curve fitting, extracting season metrics, and calculating NDVI integrals.
+- **`unmixing.py`**: Logic for Fully-Constrained Least-Squares (FCLS) sub-pixel unmixing to address mixed-pixel anomalies.
+- **`crop_model.py`**: A daily wheat growth simulator combining physical crop models with Ensemble Kalman Filter (EnKF) data assimilation.
+- **`uncertainty.py`**: Implementations for split-conformal intervals, MC-dropout, and ensemble intervals to quantify yield prediction risks.
+- **`io_utils.py`** *(referenced)*: Utility loaders for fetching local GeoTIFFs (like AWiFS) and IMD NetCDF files.
+
+### ⚙️ Configuration & Data
+
+- **`config/config.yaml`**: Centralized configuration containing state boundaries, season windows, grid sizes, classification thresholds, and ML hyperparameters.
+- **`data/sample/`**: Sample district yield history and Ministry ground-truth CSV files (used as templates for real official data substitution).
+- **`.gitlab-ci.yml`**: CI/CD pipeline definitions for linting, notebook/module smoke testing, and scheduling fortnightly operational runs.
 
 ## Setup
 
