@@ -1,6 +1,5 @@
 """Yield forecasting: 5 km grid features → scikit-learn regression →
 district/state aggregation."""
-import ee
 import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
@@ -10,6 +9,7 @@ from sklearn.metrics import r2_score, mean_squared_error
 
 def make_grid(aoi, cell_size_m=5000):
     """5 km x 5 km grid over an AOI as ee.FeatureCollection."""
+    import ee  # lazy: only needed when GEE extraction is active
     proj = ee.Projection("EPSG:4326").atScale(cell_size_m)
     grid_img = ee.Image.pixelCoordinates(proj).floor()
     cell_id = grid_img.select("x").multiply(100000) \
@@ -22,6 +22,7 @@ def extract_grid_features(images_dict, grid_img, aoi, scale=1000):
 
     images_dict: {"feature_name": ee.Image (single band)}
     """
+    import ee  # lazy: only needed when GEE extraction is active
     stack = ee.Image.cat(
         [img.rename(name) for name, img in images_dict.items()])
     stats = stack.addBands(grid_img).reduceRegion(

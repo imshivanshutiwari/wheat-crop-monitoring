@@ -25,12 +25,12 @@ class WheatGrowthModel:
                  sla=0.0022, k_ext=0.6, harvest_index=0.45,
                  heat_threshold=34.0):
         self.t_base = t_base                 # base temperature (C)
-        self.t_sum_maturity = t_sum_maturity # GDD to maturity
+        self.t_sum_maturity = t_sum_maturity  # GDD to maturity
         self.rue = rue                       # radiation-use efficiency g/MJ
         self.sla = sla                       # specific leaf area ha/kg
         self.k_ext = k_ext                   # canopy extinction coefficient
         self.harvest_index = harvest_index
-        self.heat_threshold = heat_threshold # terminal heat-stress (C)
+        self.heat_threshold = heat_threshold  # terminal heat-stress (C)
 
     def step(self, state, temp, radiation):
         """Advance one day. state = [tt, lai, biomass]."""
@@ -115,3 +115,174 @@ class EnKF:
             mean_traj.append(states.mean(0))
         yields = np.array([self.model.yield_t_ha(s[2]) for s in states])
         return np.array(mean_traj), yields
+
+    def forecast(
+        self, temps, rads, lai_obs, obs_days, T, total_days,
+        weather_generator, method='historical', **kwargs
+    ):
+        """Runs the EnKF up to day T (assimilating observations on days < T),
+        then projects the states forward to total_days using forecast ensembles.
+
+        method: 'historical' or 'ar1'
+        kwargs: passed to weather generator method
+
+        Returns:
+            mean_trajectory: shape (total_days, 3)
+            ensemble_yields: shape (n_ens,)
+        """
+        states = np.array([[0.0, 0.05 + abs(self.rng.normal(0, 0.01)), 0.0]
+                           for _ in range(self.n_ens)])
+        drivers = self._perturb_drivers(np.asarray(temps, float),
+                                        np.asarray(rads, float))
+        obs_map = dict(zip(obs_days, lai_obs))
+        mean_traj = []
+
+        for day in range(T):
+            for k in range(self.n_ens):
+                tp, rp = drivers[k]
+                states[k] = self.model.step(states[k], tp[day], rp[day])
+            if day in obs_map:
+                lai_ens = states[:, 1]
+                obs = obs_map[day] + self.rng.normal(0, self.lai_obs_std,
+                                                     self.n_ens)
+                var_f = lai_ens.var() + 1e-6
+                kal = var_f / (var_f + self.lai_obs_std ** 2)
+                states[:, 1] = lai_ens + kal * (obs - lai_ens)
+                states[:, 1] = np.clip(states[:, 1], 0, None)
+            mean_traj.append(states.mean(0))
+
+        if method == 'historical':
+            forecast_temps, forecast_rads = weather_generator.generate_historical_resampling(
+                temps, rads, T, total_days, n_ens=self.n_ens, **kwargs
+            )
+        elif method == 'ar1':
+            forecast_temps, forecast_rads = weather_generator.generate_stochastic_ar1(
+                temps, rads, T, total_days, n_ens=self.n_ens, **kwargs
+            )
+        else:
+            raise ValueError(f"Unknown forecast method: {method}")
+
+        for day in range(T, total_days):
+            for k in range(self.n_ens):
+                states[k] = self.model.step(
+                    states[k], forecast_temps[k, day], forecast_rads[k, day]
+                )
+            mean_traj.append(states.mean(0))
+
+        yields = np.array([self.model.yield_t_ha(s[2]) for s in states])
+        return np.array(mean_traj), yields
+
+
+class EnsembleWeatherGenerator:
+    """Generates weather ensembles for crop modeling forecasts."""
+
+    def __init__(self, historical_data=None, seed=42):
+        """
+        historical_data: list of tuples/arrays [(temps, rads), ...] of shape (n_days, 2)
+        """
+        self.historical_data = historical_data
+        self.rng = np.random.default_rng(seed)
+        if historical_data is not None:
+            self.hist_temps = [np.asarray(h[0], float) for h in historical_data]
+            self.hist_rads = [np.asarray(h[1], float) for h in historical_data]
+            self.n_years = len(historical_data)
+            max_days = max(len(t) for t in self.hist_temps)
+            self.climatology_temp = np.zeros(max_days)
+            self.climatology_rad = np.zeros(max_days)
+            for d in range(max_days):
+                t_vals = [t[d] for t in self.hist_temps if d < len(t)]
+                r_vals = [r[d] for r in self.hist_rads if d < len(r)]
+                self.climatology_temp[d] = np.mean(t_vals)
+                self.climatology_rad[d] = np.mean(r_vals)
+        else:
+            self.hist_temps = None
+            self.hist_rads = None
+            self.climatology_temp = None
+            self.climatology_rad = None
+
+    def generate_historical_resampling(
+        self, observed_temps, observed_rads, T, total_days, n_ens=50
+    ):
+        """Generates n_ens weather sequences.
+        For each member, days 0 to T-1 are observed weather.
+        Days T to total_days-1 are randomly resampled from historical years.
+        """
+        observed_temps = np.asarray(observed_temps, float)
+        observed_rads = np.asarray(observed_rads, float)
+        ensemble_temps = []
+        ensemble_rads = []
+
+        if self.historical_data is None or len(self.historical_data) == 0:
+            raise ValueError("Historical data must be provided for historical resampling.")
+
+        for _ in range(n_ens):
+            year_idx = self.rng.choice(self.n_years)
+            hist_t = self.hist_temps[year_idx]
+            hist_r = self.hist_rads[year_idx]
+
+            forecast_len = total_days - T
+            hist_t_slice = hist_t[T:total_days]
+            hist_r_slice = hist_r[T:total_days]
+
+            if len(hist_t_slice) < forecast_len:
+                padding_len = forecast_len - len(hist_t_slice)
+                hist_t_slice = np.concatenate([hist_t_slice, np.full(padding_len, hist_t[-1])])
+                hist_r_slice = np.concatenate([hist_r_slice, np.full(padding_len, hist_r[-1])])
+
+            t_member = np.concatenate([observed_temps[:T], hist_t_slice])
+            r_member = np.concatenate([observed_rads[:T], hist_r_slice])
+            ensemble_temps.append(t_member)
+            ensemble_rads.append(r_member)
+
+        return np.array(ensemble_temps), np.array(ensemble_rads)
+
+    def generate_stochastic_ar1(
+        self, observed_temps, observed_rads, T, total_days, n_ens=50,
+        phi_temp=0.7, phi_rad=0.5, sigma_temp=2.0, sigma_rad=1.5
+    ):
+        """Generates n_ens weather sequences using AR(1) around the climatology.
+        If no historical data is provided, climatology is estimated as the mean of observed.
+        """
+        observed_temps = np.asarray(observed_temps, float)
+        observed_rads = np.asarray(observed_rads, float)
+
+        if self.climatology_temp is not None:
+            clim_t = self.climatology_temp
+            clim_r = self.climatology_rad
+        else:
+            clim_t = np.full(total_days, np.mean(observed_temps))
+            clim_r = np.full(total_days, np.mean(observed_rads))
+
+        if len(clim_t) < total_days:
+            clim_t = np.concatenate([clim_t, np.full(total_days - len(clim_t), clim_t[-1])])
+            clim_r = np.concatenate([clim_r, np.full(total_days - len(clim_r), clim_r[-1])])
+
+        ensemble_temps = []
+        ensemble_rads = []
+
+        for _ in range(n_ens):
+            t_seq = np.zeros(total_days)
+            r_seq = np.zeros(total_days)
+
+            t_seq[:T] = observed_temps[:T]
+            r_seq[:T] = observed_rads[:T]
+
+            last_t = observed_temps[T-1] if T > 0 else clim_t[0]
+            last_r = observed_rads[T-1] if T > 0 else clim_r[0]
+
+            for d in range(T, total_days):
+                dev_t = phi_temp * (last_t - clim_t[d-1]) + self.rng.normal(0, sigma_temp)
+                dev_r = phi_rad * (last_r - clim_r[d-1]) + self.rng.normal(0, sigma_rad)
+
+                last_t = clim_t[d] + dev_t
+                last_r = clim_r[d] + dev_r
+
+                last_r = max(1.0, last_r)
+
+                t_seq[d] = last_t
+                r_seq[d] = last_r
+
+            ensemble_temps.append(t_seq)
+            ensemble_rads.append(r_seq)
+
+        return np.array(ensemble_temps), np.array(ensemble_rads)
