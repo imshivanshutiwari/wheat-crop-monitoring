@@ -51,7 +51,7 @@ def classify(feature_stack, classifier):
     return feature_stack.classify(classifier).rename("wheat")
 
 
-def area_lakh_ha(wheat_map, aoi, scale=20):
+def area_lakh_ha(wheat_map, aoi, scale=250):
     """Wheat area in lakh hectares (1 lakh ha = 1e5 ha = 1e9 m2)."""
     area_img = wheat_map.eq(1).multiply(ee.Image.pixelArea())
     m2 = area_img.reduceRegion(
