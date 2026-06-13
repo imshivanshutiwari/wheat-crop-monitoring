@@ -56,7 +56,24 @@ Refactor `generate_report.py` to fix ReportLab layout, formatting, text wrapping
   <done>The PDF file is compiled successfully and resides in the output directory.</done>
 </task>
 
+<task type="auto">
+  <name>Create Crop Analytics and Visualization Notebook</name>
+  <files>notebooks/09_crop_analytics_visualization.ipynb</files>
+  <action>
+    - Create a Jupyter notebook `notebooks/09_crop_analytics_visualization.ipynb`.
+    - Implement python cells that load:
+      - `data/sample/district_yield_history.csv`
+      - `data/sample/ministry_ground_truth.csv`
+      - Any output CSV files from previous notebooks or generate consistent mock data if they aren't generated.
+    - Generate 20 distinct publication-quality visualizations using matplotlib and seaborn.
+    - Save the notebook with all outputs rendered.
+  </action>
+  <verify>powershell "Test-Path notebooks/09_crop_analytics_visualization.ipynb"</verify>
+  <done>Notebook `09_crop_analytics_visualization.ipynb` is created and runs without error, rendering 20 beautiful graphs.</done>
+</task>
+
 ## Success Criteria
 - [ ] `generate_report.py` runs without error and generates `outputs/UAV_GPR_Research_Report.pdf`.
 - [ ] Table cells are fully wrapped with no text clippings or page-width overflows.
 - [ ] Output PDF meets high-quality design standards.
+- [ ] Notebook `notebooks/09_crop_analytics_visualization.ipynb` is created and contains exactly 20 distinct graphs and visualizations, all rendered correctly.

@@ -33,3 +33,4 @@ venv/
 
 # GEE credentials
 .config/earthengine/
+client_secret_*.json

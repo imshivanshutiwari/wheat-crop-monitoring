@@ -1,4 +1,6 @@
 """Google Earth Engine helpers: init, AOIs, cloud masking, composites."""
+import os
+import yaml
 import ee
 
 GAUL_STATES = "FAO/GAUL/2015/level1"
@@ -6,6 +8,21 @@ GAUL_STATES = "FAO/GAUL/2015/level1"
 
 def init_ee(project=None):
     """Initialize Earth Engine (run ee.Authenticate() once beforehand)."""
+    if project is None:
+        # Check config.yaml to automatically find the project ID
+        for path in ["config/config.yaml", "../config/config.yaml", "../../config/config.yaml"]:
+            if os.path.exists(path):
+                try:
+                    with open(path) as f:
+                        cfg = yaml.safe_load(f)
+                        project = cfg.get("gee_project_id")
+                        if project == "your-gcp-project-id":  # default placeholder
+                            project = None
+                        if project:
+                            break
+                except Exception:
+                    pass
+
     try:
         ee.Initialize(project=project)
     except Exception:
@@ -29,24 +46,17 @@ def get_states_fc(state_names, country="India"):
 
 
 def mask_s2_clouds(img, max_cloud_prob=40):
-    """Mask Sentinel-2 SR image using joined s2cloudless probability."""
-    prob = ee.Image(img.get("cloud_prob")).select("probability")
+    """Mask Sentinel-2 SR image using built-in MSK_CLDPRB probability."""
+    prob = img.select("MSK_CLDPRB")
     return img.updateMask(prob.lt(max_cloud_prob)).divide(10000) \
               .copyProperties(img, ["system:time_start"])
 
 
 def get_s2_collection(aoi, start, end, max_cloud_prob=40):
-    """Cloud-masked Sentinel-2 SR collection (joined with s2cloudless)."""
+    """Cloud-masked Sentinel-2 SR collection (using built-in MSK_CLDPRB)."""
     s2 = (ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED")
           .filterBounds(aoi).filterDate(start, end))
-    clouds = (ee.ImageCollection("COPERNICUS/S2_CLOUD_PROBABILITY")
-              .filterBounds(aoi).filterDate(start, end))
-    joined = ee.Join.saveFirst("cloud_prob").apply(
-        primary=s2, secondary=clouds,
-        condition=ee.Filter.equals(leftField="system:index",
-                                   rightField="system:index"))
-    return ee.ImageCollection(joined).map(
-        lambda img: mask_s2_clouds(ee.Image(img), max_cloud_prob))
+    return s2.map(lambda img: mask_s2_clouds(ee.Image(img), max_cloud_prob))
 
 
 def get_s1_collection(aoi, start, end, orbit="DESCENDING"):

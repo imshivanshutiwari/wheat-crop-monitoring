@@ -40,7 +40,7 @@ def calculate_fortnight_vhi(i):
         return f.set({
             'date': date_str,
             'state': f.get('ADM1_NAME'),
-            'VHI': f.get('VHI')
+            'VHI': f.get('mean')
         })
     
     return state_means.map(format_feature)

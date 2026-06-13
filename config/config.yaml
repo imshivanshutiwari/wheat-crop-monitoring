@@ -1,5 +1,9 @@
 # Wheat Crop Monitoring — operational configuration
 
+# Google Earth Engine Project ID (Replace with your own GCP Project ID)
+# Find yours at https://console.cloud.google.com/ or https://code.earthengine.google.com/
+gee_project_id: "wheat-crop-monitoring-499208"
+
 states:
   - Uttar Pradesh
   - Madhya Pradesh
